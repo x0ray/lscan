@@ -33,7 +33,7 @@ Build and run:
 			go mod init github.com/x0ray/lscan
 			go: creating new go.mod: module github.com/x0ray/lscan
 
-			go build ./..
+			go install ./..
 			./lscan
 
 Testing:
@@ -43,32 +43,32 @@ Testing:
 
 Output:
 	❯ ./lscan -x xxx.go -s yyy.go -list
-	2021/05/14 02:51:28 WARN index key: '.flow.initial.id.not.valid.log' at: xxx.go:70:60 was not added, already occurs at: xxx.go:63:60
+	2021/05/14 02:51:28 WARN index key: '.log.initial.id.not.valid.log' at: xxx.go:70:60 was not added, already occurs at: xxx.go:63:60
 	2021/05/14 02:51:28 Index file keys from: 'lscan.go' follow
 	Num     Location        Matched Literal
-	0001    lscan.go:65:60  .flow.client.extract.failed.log
-	0002    lscan.go:66:60  .flow.file.uri.short.error.log
-	0003    lscan.go:67:60  .flow.uri.prefix.not.valid.log
-	0004    lscan.go:69:60  .flow.name.not.valid.log
-	0005    lscan.go:71:60  .flow.id.not.valid.type.log
-	0006    lscan.go:63:60  .flow.initial.id.not.valid.log
-	0007    lscan.go:64:60  .flow.unmarshal.failed.error.log
-	0008    lscan.go:72:60  .flow.id.not.valid.number.dependencies.log
-	0009    lscan.go:62:60  .flow.expected.status.error.log
-	0010    lscan.go:68:60  .flow.invalid.dependency.ID.log
+	0001    lscan.go:65:60  .log.client.extract.failed.log
+	0002    lscan.go:66:60  .log.file.uri.short.error.log
+	0003    lscan.go:67:60  .log.uri.prefix.not.valid.log
+	0004    lscan.go:69:60  .log.name.not.valid.log
+	0005    lscan.go:71:60  .log.id.not.valid.type.log
+	0006    lscan.go:63:60  .log.initial.id.not.valid.log
+	0007    lscan.go:64:60  .log.unmarshal.failed.error.log
+	0008    lscan.go:72:60  .log.id.not.valid.number.dependencies.log
+	0009    lscan.go:62:60  .log.expected.status.error.log
+	0010    lscan.go:68:60  .log.invalid.dependency.ID.log
 	2021/05/14 02:51:28 Scan file keys from: 'testinput.go' follow
 	Num     Location        Matched Literal
-	0001    testinput.go:5:18+0     .flow.expected.status.error.log
-	0002    testinput.go:5:18+3     .flow.uri.prefix.not.valid.log
-	0003    testinput.go:5:18+4     .flow.invalid.dependency.ID.log
-	0004    testinput.go:5:18+5     .flow.name.notvalid.log
-	0005    testinput.go:5:18+6     .flow.initial.id.not.valid.log
-	0006    testinput.go:5:18+8     .flow.id.not.valid.number.dependencies.log
-	0007    testinput.go:5:18+1     .flow.unmarshal.failed.error.log
-	0008    testinput.go:5:18+2     .flow.client.extract.failed.log
-	0009    testinput.go:5:18+7     .flow.id.not.valid.type.log
-	2021/05/14 02:51:28 WARN index key: '.flow.file.uri.short.error.log' at: xxx.go:66:60 not found in scan file: 'yyy.go'
-	2021/05/14 02:51:28 WARN index key: '.flow.name.not.valid.log' at: xxx.go:69:60 not found in scan file: 'yyy.go'
+	0001    testinput.go:5:18+0     .log.expected.status.error.log
+	0002    testinput.go:5:18+3     .log.uri.prefix.not.valid.log
+	0003    testinput.go:5:18+4     .log.invalid.dependency.ID.log
+	0004    testinput.go:5:18+5     .log.name.notvalid.log
+	0005    testinput.go:5:18+6     .log.initial.id.not.valid.log
+	0006    testinput.go:5:18+8     .log.id.not.valid.number.dependencies.log
+	0007    testinput.go:5:18+1     .log.unmarshal.failed.error.log
+	0008    testinput.go:5:18+2     .log.client.extract.failed.log
+	0009    testinput.go:5:18+7     .log.id.not.valid.type.log
+	2021/05/14 02:51:28 WARN index key: '.log.file.uri.short.error.log' at: xxx.go:66:60 not found in scan file: 'yyy.go'
+	2021/05/14 02:51:28 WARN index key: '.log.name.not.valid.log' at: xxx.go:69:60 not found in scan file: 'yyy.go'
 */
 
 const (
@@ -80,8 +80,8 @@ const (
 	code is produced along with messages on stderr.
 `
 	pgm     = "LScan"
-	ver     = "0.0.8"
-	verdate = "16May2021"
+	ver     = "0.0.10"
+	verdate = "16Aug2021"
 )
 
 var opt struct {
@@ -129,7 +129,7 @@ func initOpt() {
 
 func main() {
 	rc := body()
-	os.Exit(rc) // us RC outside body to allow lscan_test.go to test body()
+	os.Exit(rc) // us RC outside body to allow lscan_log.go to test body()
 }
 
 func body() int {
@@ -163,7 +163,7 @@ func body() int {
 	}
 
 	if opt.verbose {
-		log.Printf("LScan started.")
+		log.Printf("%s started.\n", pgm)
 	}
 
 	indexRx, err = regexp.Compile(opt.indexRx)
@@ -216,7 +216,8 @@ func body() int {
 			if matched := indexRx.MatchString(lit); matched {
 				posn := fset.Position(pos).String()
 				if ep, ok := index[lit]; ok { // check already there == duplicate
-					log.Printf("WARN index key: '%s' at: %s was not added, already occurs at: %s \n", lit, posn, ep)
+					log.Printf("WARN Key: '%s' Loc: %s already indexed. Not adding new key Loc: %s \n",
+						lit, posn, ep)
 					rc = 1
 				} else {
 					index[lit] = posn
@@ -296,7 +297,7 @@ func body() int {
 		// check scan file contains all values from index file
 		for k, v := range index {
 			if _, ok := scan[k]; !ok {
-				log.Printf("WARN index key: '%s' at: %s not found in scan file: '%s'\n", k, v, opt.scanFile)
+				log.Printf("WARN Key: '%s' Loc: %s not found in scan file: '%s'\n", k, v, opt.scanFile)
 				rc = 2
 			}
 		}
@@ -304,7 +305,7 @@ func body() int {
 
 theend:
 	if opt.verbose {
-		log.Printf("LScan ended.")
+		log.Printf("%s ended.\n", pgm)
 	}
 	return rc
 }
